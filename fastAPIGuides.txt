@@ -1,0 +1,25 @@
+
+
+Tutorial =>
+https://www.youtube.com/watch?v=rMyV1GoS4bI&list=PLsvvBhdpMqBzWyrSOWg0PO67t2K7IaEhE&index=3
+
+uvicorn fastAPITutorial:app --reload
+
+Subscribe Push Notification HTML FilePath =>
+/CJPersonal/Learning/Python/FastAPI/templates/subscribe_push_ntf.html
+
+Service Worker JS FilePath =>
+/CJPersonal/Learning/Python/FastAPI/firebase-messaging-sw.js
+
+Device-Token =>
+cil44b0TEw2AJDEqX_mj2r:APA91bF0nNOAioiTnkH6E03HTxJY5-bDeZCIwmhGxbpWu44VDSgWl_QzzrwRuMMrWnXIyoaaJmQ66mWPxZ08Hcxhk5XNStRo9t5XtqhTF7f5IQm3oomBN5M
+
+
+This is my python serving subscribe push notification url =>
+http://127.0.0.1:8000/subscribePushNotification/
+Subscribe Push Notification HTML FilePath =>
+/CJPersonal/Learning/Python/FastAPI/templates/subscribe_push_ntf.html
+Service Worker JS FilePath =>
+/CJPersonal/Learning/Python/FastAPI/firebase-messaging-sw.js
+
+

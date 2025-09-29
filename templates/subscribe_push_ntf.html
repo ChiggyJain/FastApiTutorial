@@ -1,0 +1,163 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Subscribe Push Notification</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    #status { margin-bottom: 10px; }
+    #tokens { margin-top: 10px; }
+    li { word-break: break-all; margin-bottom: 6px; }
+    button { padding: 8px 12px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>Subscribe Push Notification</h1>
+  <div id="status">Status: <span id="st-text">Idle</span></div>
+  <button id="get-token-btn">Request Notification Permission & Get Device Token</button>
+  <button id="clear-tokens-btn">Clear Generated Token List</button>
+
+  <h3>Saved Tokens:</h3>
+  <ul id="tokens"></ul>
+
+  <script type="module">
+
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging.js";
+
+    // ---------- CONFIG: REPLACE THESE ----------
+    const firebaseConfig = {
+        apiKey: "AIzaSyB_JO4U2Eb5Uuf0sRPWkD81cX9-9vJzHsU",
+        authDomain: "cj-fastapi-push-ntf.firebaseapp.com",
+        projectId: "cj-fastapi-push-ntf",
+        storageBucket: "cj-fastapi-push-ntf.firebasestorage.app",
+        messagingSenderId: "891797103531",
+        appId: "1:891797103531:web:bceec7e05fb9d49058e8ee",
+        measurementId: "G-WZ5D71NXV4"
+    };
+
+    // Web push certificate from Firebase console
+    const VAPID_KEY = "BImgNg_YEg1QiCfKUW1QgTx0aaPMm8mu0QfIJMiBcZIPMZk9l_V6Hs9KPfZkpSqImulfVYW2qkJvX8PWVZa3UlU";
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const messaging = getMessaging(app);
+
+    const stText = document.getElementById('st-text');
+    const tokensUL = document.getElementById('tokens');
+    const getTokenBtn = document.getElementById('get-token-btn');
+    const clearBtn = document.getElementById('clear-tokens-btn');
+
+    function setStatus(s) {
+        stText.textContent = s;
+    }
+
+    // Register service worker (must be at root)
+    async function registerServiceWorker() {
+      try {
+        const reg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        console.log('Service Worker registered:', reg);
+        return reg;
+      } catch (err) {
+        console.error('SW registration failed:', err);
+        throw err;
+      }
+    }
+
+    // Add a token to UL (avoid duplicates)
+    function addTokenToList(token) {
+      if ([...tokensUL.querySelectorAll('li')].some(li => li.textContent === token)) return;
+      const li = document.createElement('li');
+      li.textContent = token;
+      tokensUL.prepend(li);
+    }
+
+    // Send token to backend (change URL as required)
+    async function sendTokenToServer(token) {
+      try {
+        const res = await fetch('/save-token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token })
+        });
+        if (!res.ok) {
+          console.warn('Server responded with', res.status);
+        } else {
+          console.log('Token saved on server.');
+        }
+      } catch (err) {
+        console.warn('Failed to send token to server:', err);
+      }
+    }
+
+    // Main flow: ask permission, get token
+    async function requestPermissionAndGetToken() {
+      try {
+        setStatus('Checking service worker support...');
+        if (!('serviceWorker' in navigator)) throw new Error('Service workers not supported in this browser.');
+        setStatus('Registering service worker...');
+        const reg = await registerServiceWorker();
+        setStatus('Requesting notification permission...');
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+          setStatus('Permission denied');
+          return;
+        }
+        setStatus('Getting FCM token...');
+        // getToken returns the current registration token for the app.
+        const currentToken = await getToken(messaging, {
+            vapidKey: VAPID_KEY,
+             serviceWorkerRegistration: reg
+        });
+        if (currentToken) {
+          setStatus('Token received');
+          addTokenToList(currentToken);
+          // Save to backend
+          // sendTokenToServer(currentToken);
+        } else {
+          setStatus('No registration token available. Request permission to generate one.');
+          console.warn('No registration token available.');
+        }
+      } catch (err) {
+        console.error('Error while getting token:', err);
+        setStatus('Error: ' + (err.message || err));
+      }
+    }
+
+    // Listen for messages while page is in the foreground
+    onMessage(messaging, (payload) => {
+      console.log('Message received in foreground:', payload);
+      const notificationTitle = payload.notification?.title || 'New Notification';
+      const notificationOptions = {
+        body: payload.notification?.body || '',
+        icon: '/static/icon.png', // optional, place an icon in your static folder
+        data: {
+          click_action: payload.data?.click_action || 'https://coderarmy.in/'
+        }
+      };
+      // Show browser notification
+      if(Notification.permission === "granted") {
+        const notification = new Notification(notificationTitle, notificationOptions);
+        // Handle click
+        notification.onclick = (event) => {
+          event.preventDefault();
+          window.open(notificationOptions.data.click_action, '_blank');
+        };
+      } else {
+        console.warn("Notification permission not granted.");
+      }
+    });
+
+
+    // Wire buttons
+    getTokenBtn.addEventListener('click', requestPermissionAndGetToken);
+    clearBtn.addEventListener('click', () => { tokensUL.innerHTML = ''; });
+
+    // Optionally, you can auto-run once on load:
+    // requestPermissionAndGetToken();
+
+  </script>
+</body>
+</html>
